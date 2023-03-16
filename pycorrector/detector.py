@@ -14,6 +14,7 @@ from pycorrector import config
 from pycorrector.utils.get_file import get_file
 from pycorrector.utils.text_utils import uniform, is_alphabet_string, is_chinese_string
 from pycorrector.utils.tokenizer import Tokenizer, split_2_short_text
+from pycorrector.utils.trie import Trie
 from pycorrector.proper_corrector import ProperCorrector
 
 
@@ -42,7 +43,8 @@ class Detector(object):
             place_name_path=config.place_name_path,
             stopwords_path=config.stopwords_path,
             proper_name_path=config.proper_name_path,
-            stroke_path=config.stroke_path
+            stroke_path=config.stroke_path,
+            is_use_trie=True
     ):
         self.name = 'detector'
         self.language_model_path = language_model_path
@@ -66,6 +68,9 @@ class Detector(object):
         self.proper_corrector = None
         self.proper_name_path = proper_name_path
         self.stroke_path = stroke_path
+        self.custom_confusion_trie = Trie()
+        self.initialized_confusion_trie = False
+        self.is_use_trie = is_use_trie
 
     def _initialize_detector(self):
         try:
@@ -99,6 +104,12 @@ class Detector(object):
             self.custom_confusion = self._get_custom_confusion_dict(self.custom_confusion_path_or_dict)
         else:
             raise ValueError('custom_confusion_path_or_dict must be dict or str.')
+        # TODO(by shenwei): 构建混淆集合trie树
+        if not self.initialized_confusion_trie:
+            logger.debug("construct trie.")
+            for k, v in self.custom_confusion.items():
+                self.custom_confusion_trie.insert(k)
+            self.initialized_confusion_trie = True if len(self.custom_confusion) != 0 else False
         # 自定义切词词典
         self.custom_word_freq = self.load_word_freq_dict(self.custom_word_freq_path)
         self.person_names = self.load_word_freq_dict(self.person_name_path)
@@ -191,6 +202,12 @@ class Detector(object):
         else:
             raise ValueError('custom_confusion_path_or_dict must be dict or str.')
         logger.debug('Loaded confusion size: %d' % len(self.custom_confusion))
+        # TODO(by shenwei): 构建混淆集合trie树
+        if not self.initialized_confusion_trie:
+            logger.debug("construct trie.")
+            for k, v in self.custom_confusion.items():
+                self.custom_confusion_trie.insert(k)
+            self.initialized_confusion_trie = True if len(self.custom_confusion) != 0 else False
 
     def set_custom_word_freq(self, path):
         self.check_detector_initialized()
@@ -385,11 +402,22 @@ class Detector(object):
         # 初始化
         self.check_detector_initialized()
         # 1. 自定义混淆集加入疑似错误词典
-        for confuse in self.custom_confusion:
-            idx = sentence.find(confuse)
-            if idx > -1:
-                maybe_err = [confuse, idx + start_idx, idx + len(confuse) + start_idx, ErrorType.confusion]
+        if self.is_use_trie is False:
+            for confuse in self.custom_confusion:
+                idx = sentence.find(confuse)
+                if idx > -1:
+                    maybe_err = [confuse, idx + start_idx, idx + len(confuse) + start_idx, ErrorType.confusion]
+                    self._add_maybe_error_item(maybe_err, maybe_errors)
+        else:
+            # fix: 查找逻辑，使用trie树以减少大字典带来的查找问题
+            maybe_errors_list = \
+                self.custom_confusion_trie.get_word_from_sentence(sentence,
+                                                                  start_idx,
+                                                                  ErrorType.confusion)
+            logger.debug(maybe_errors_list)
+            for maybe_err in maybe_errors_list:
                 self._add_maybe_error_item(maybe_err, maybe_errors)
+
 
         # 2. 专名错误检测
         _, proper_details = self.proper_corrector.proper_correct(sentence, start_idx=start_idx, **kwargs)
