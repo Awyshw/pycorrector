@@ -278,6 +278,61 @@ iPhone差 iPhoneX
 > 混淆集功能在`correct`方法中生效；
 > `set_custom_confusion_dict`方法的`path`参数为用户自定义混淆集文件路径(str)或混淆集字典(dict)。
 
+### 音形码(SoundShapeCode)相似度
+
+该模块基于别名词典(format: name\talias\tbusiness)找出与词典相近/混淆音相似中文字符串。
+
+example: [examples/ssc_demo.py](examples/ssc_demo.py)
+
+```python
+# -*- coding: utf-8 -*-
+import json
+import sys
+from pycorrector import SoundShapeSim
+
+if __name__ == "__main__":
+    slot = sys.argv[1]  # 要查询是否存在词典的相近音/混淆音，例如张三、李四、三哥、四个(四哥)
+    sscs = SoundShapeSim(custom_ssc_confusion_dict_or_path="./vocab.txt")
+    sscs.set_custom_ssc_path_or_dict('./vocab.txt')
+    business = "default"  # 区分业务
+    result = sscs.ssc_similarity(business, slot)
+    print(json.dumps(result, ensure_ascii=False))
+```
+
+```shell
+python -u ssc_demo.py 三哥
+```
+
+output:
+
+```json
+{
+    "name-alias":{
+        "name":"张三",
+        "code":100,   // 100表示命中别名，并给出真实名字；200表示命中真实名字.
+        "cnt":1       // 表示出现次数，别名仅有一个，真实名字可以有多个。
+    },
+    "ssc":{             // 相近音/混淆音计算
+        "code":"301",   // 301-命中别名， 302-命中真实名字，303-全部命中
+        "alias_ssc":{
+            "三哥":1
+        },
+        "name_ssc":{
+
+        }
+    }
+}
+
+```
+
+自定义词典vocab.txt
+
+```
+# name  alias business
+张三  三哥  default
+```
+
+
 ### 自定义语言模型
 
 默认提供下载并使用的kenlm语言模型`zh_giga.no_cna_cmn.prune01244.klm`文件是2.8G，内存小的电脑使用`pycorrector`程序可能会吃力些。
