@@ -4,3 +4,4 @@ numpy
 six
 loguru
 kenlm
+pyhanlp

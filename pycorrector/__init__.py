@@ -13,6 +13,7 @@ from pycorrector.utils.text_utils import get_homophones_by_char, get_homophones_
     simplified2traditional
 from pycorrector.proper_corrector import ProperCorrector
 from pycorrector.confusion_corrector import ConfusionCorrector
+from pycorrector.sound_shape_similarity import SoundShapeSim
 
 # 中文纠错
 ct = Corrector()
@@ -28,6 +29,10 @@ word_frequency = ct.word_frequency
 detect = ct.detect
 enable_char_error = ct.enable_char_error
 enable_word_error = ct.enable_word_error
+
+# 相近音/混淆音计算
+sscs = SoundShapeSim()
+ssc_similarity = sscs.ssc_similarity
 
 # 英文纠错
 sp = EnSpell()

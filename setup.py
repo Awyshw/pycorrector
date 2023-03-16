@@ -51,5 +51,7 @@ setup(
     ],
     packages=find_packages(exclude=['tests']),
     package_dir={'pycorrector': 'pycorrector'},
-    package_data={'pycorrector': ['*.*', 'data/*', 'data/en/en.json.gz']}
+    package_data={'pycorrector': ['*.*', 'data/*', 'zh_data/*', 'data/en/en.json.gz',
+                                  "soundshapecode/*", "soundshapecode/*/*",
+                                  "soundshapecode/*/data/*"]}
 )
